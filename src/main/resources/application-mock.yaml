@@ -1,0 +1,12 @@
+server:
+  port: 9090
+
+spring:
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.jdbc.autoconfigure.DataSourceAutoConfiguration
+  flyway:
+    enabled: false
+  docker:
+    compose:
+      enabled: false
