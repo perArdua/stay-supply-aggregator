@@ -6,6 +6,7 @@ import io.github.perardua.staysupply.adapter.SupplierClient;
 import jakarta.transaction.Transactional;
 
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.List;
 
 public class SupplierSyncExecutor {
@@ -18,7 +19,7 @@ public class SupplierSyncExecutor {
 
     @Transactional
     public SyncResult sync(SupplierClient supplierClient) {
-        LocalDateTime startedAt = LocalDateTime.now();
+        LocalDateTime startedAt = LocalDateTime.now(ZoneOffset.UTC);
 
         List<PropertyListing> propertyListingList = supplierClient.fetchProperties();
 

@@ -1,6 +1,8 @@
 services:
   mysql:
     image: 'mysql:8.4'
+    # 시각은 전부 UTC로 저장한다. SYSTEM이면 컨테이너 OS 시간대를 따라가므로 명시적으로 고정한다.
+    command: --default-time-zone=+00:00
     environment:
       - 'MYSQL_DATABASE=mydatabase'
       - 'MYSQL_PASSWORD=secret'
