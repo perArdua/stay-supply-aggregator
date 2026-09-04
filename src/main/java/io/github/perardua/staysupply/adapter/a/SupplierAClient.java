@@ -1,7 +1,10 @@
 package io.github.perardua.staysupply.adapter.a;
 
 import java.time.Duration;
+import java.time.LocalDate;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.TimeoutException;
 
 import org.springframework.core.codec.DecodingException;
@@ -72,8 +75,93 @@ public class SupplierAClient implements SupplierClient {
 
     @Override
     public Mono<List<SupplierOffer>> fetchAvailability(List<String> supplierCodes, AvailabilityQuery query) {
-        // TODO: 다음 단계에서 구현
-        throw new UnsupportedOperationException("fetchAvailability is not implemented yet");
+        return webClient.get()
+                .uri(uriBuilder -> uriBuilder
+                        .path("/a/v1/availability")
+                        .queryParam("hotelCodes", String.join(",", supplierCodes))
+                        .queryParam("checkIn", query.checkIn())
+                        .queryParam("checkOut", query.checkOut())
+                        .queryParam("adults", query.adults())
+                        .queryParam("children", query.children())
+                        .build())
+                .retrieve()
+                .onStatus(HttpStatusCode::is4xxClientError, r -> Mono.error(new SupplierClientErrorException(
+                        Supplier.A, "availability API responded " + r.statusCode(), null)))
+                .onStatus(HttpStatusCode::is5xxServerError, r -> Mono.error(new SupplierServerException(
+                        Supplier.A, "availability API responded " + r.statusCode(), null)))
+                .bodyToMono(AAvailabilityResponse.class)
+                .timeout(overallTimeout)
+                .map(response -> toOffers(response, query))
+                .defaultIfEmpty(List.of())
+                .onErrorMap(e -> !(e instanceof SupplierClientException), this::toSupplierException);
+    }
+
+    private SupplierClientException toSupplierException(Throwable e) {
+        if (hasCause(e, TimeoutException.class)) {
+            return new SupplierTimeoutException(Supplier.A, "availability API timed out", e);
+        }
+        if (hasCause(e, DecodingException.class)) {
+            return new SupplierMalformedException(Supplier.A, "availability API response could not be decoded", e);
+        }
+        return new SupplierServerException(Supplier.A, "availability API call failed", e);
+    }
+
+    private List<SupplierOffer> toOffers(AAvailabilityResponse response, AvailabilityQuery query) {
+        if (response.items() == null) {
+            return List.of();
+        }
+        return response.items().stream().map(item -> toOffer(item, query)).toList();
+    }
+
+    private SupplierOffer toOffer(AAvailability item, AvailabilityQuery query) {
+        List<ADailyRate> dailyRates = item.dailyRates() == null ? List.of() : item.dailyRates();
+
+        // 중복 날짜는 요금까지 이중으로 더해지므로 합산에 들어가기 전에 걸러낸다.
+        Map<LocalDate, Integer> remainingByDate = remainingRoomsByDate(item, dailyRates);
+
+        // A는 날짜별 세금 별도 단가를 주므로 기간 전체 총액으로 합산한다.
+        long totalAmountIncludingTax = 0L;
+        long taxAmount = 0L;
+        for (ADailyRate rate : dailyRates) {
+            totalAmountIncludingTax += rate.nightlyRate() + rate.taxAmount();
+            taxAmount += rate.taxAmount();
+        }
+
+        return new SupplierOffer(
+                item.hotelCode(),
+                item.hotelName(),
+                item.roomTypeCode(),
+                item.roomTypeName(),
+                item.maxOccupancy(),
+                availableRooms(remainingByDate, query),
+                item.breakfastIncluded(),
+                item.currency(),
+                totalAmountIncludingTax,
+                taxAmount);
+    }
+
+    private Map<LocalDate, Integer> remainingRoomsByDate(AAvailability item, List<ADailyRate> dailyRates) {
+        Map<LocalDate, Integer> remainingByDate = new HashMap<>();
+        for (ADailyRate rate : dailyRates) {
+            if (rate.date() == null) {
+                continue;
+            }
+            if (remainingByDate.put(rate.date(), rate.remainingRooms()) != null) {
+                throw new SupplierMalformedException(Supplier.A,
+                        "availability API returned duplicate date " + rate.date()
+                                + " for " + item.hotelCode() + "/" + item.roomTypeCode(), null);
+            }
+        }
+        return remainingByDate;
+    }
+
+    private int availableRooms(Map<LocalDate, Integer> remainingByDate, AvailabilityQuery query) {
+        int minimum = Integer.MAX_VALUE;
+        for (LocalDate night = query.checkIn(); night.isBefore(query.checkOut()); night = night.plusDays(1)) {
+            minimum = Math.min(minimum, remainingByDate.getOrDefault(night, 0));
+        }
+
+        return minimum;
     }
 
     private static boolean hasCause(Throwable throwable, Class<? extends Throwable> type) {
@@ -99,6 +187,14 @@ public class SupplierAClient implements SupplierClient {
     }
 
     record AHotelsResponse(List<AHotel> items) {}
+
+    record AAvailabilityResponse(List<AAvailability> items) {}
+
+    record AAvailability(
+            String hotelCode, String hotelName, String roomTypeCode, String roomTypeName,
+            int maxOccupancy, boolean breakfastIncluded, String currency, List<ADailyRate> dailyRates) {}
+
+    record ADailyRate(LocalDate date, int remainingRooms, long nightlyRate, long taxAmount) {}
 
     record AHotel(String hotelCode, String hotelName, List<ARoomType> roomTypes) {}
 
