@@ -78,7 +78,7 @@ public class SupplierBClient implements SupplierClient {
             throw new SupplierMalformedException(Supplier.B, "property API returned an empty body", null);
         }
 
-        verifyResultCode(envelope.resultCode(), envelope.resultMessage());
+        verifyResultCode("property API", envelope.resultCode(), envelope.resultMessage());
 
         // 성공 응답이 데이터를 안 주는 것은 "숙소가 없다"가 아니라 스펙 위반이다.
         if (envelope.data() == null || envelope.data().items() == null) {
@@ -125,7 +125,7 @@ public class SupplierBClient implements SupplierClient {
     }
 
     private List<SupplierOffer> toOffers(BSearchEnvelope envelope, AvailabilityQuery query) {
-        verifyResultCode(envelope.resultCode(), envelope.resultMessage());
+        verifyResultCode("search API", envelope.resultCode(), envelope.resultMessage());
 
         // 성공 응답이 데이터를 안 주는 것은 "재고가 없다"가 아니라 스펙 위반이다.
         if (envelope.data() == null || envelope.data().items() == null) {
@@ -178,12 +178,12 @@ public class SupplierBClient implements SupplierClient {
         return minimum;
     }
 
-    private void verifyResultCode(String resultCode, String resultMessage) {
+    private void verifyResultCode(String api, String resultCode, String resultMessage) {
         if (RESULT_CODE_SUCCESS.equals(resultCode)) {
             return;
         }
 
-        String detail = "property API returned resultCode " + resultCode + " (" + resultMessage + ")";
+        String detail = api + " returned resultCode " + resultCode + " (" + resultMessage + ")";
 
         switch (resultCode == null ? "" : resultCode) {
             case "E400", "E401", "E429" ->
