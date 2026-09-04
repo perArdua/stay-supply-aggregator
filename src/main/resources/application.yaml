@@ -32,6 +32,9 @@ suppliers:
 # 임시값 - Phase 6에서 커넥션 풀과 함께 확정
 search:
   max-concurrent-calls-per-supplier: 8
+  # 검색 요청 전체의 상한. 공급사 호출 하나당 상한(overall-timeout-millis)보다 커야
+  # 배치가 나뉠 때 뒤 배치가 나갈 시간이 남는다. 임시값 - Phase 6에서 확정
+  deadline-millis: 5000
 
 # 공급사 매핑 정기 재동기화. 트래픽이 적은 새벽에 하루 한 번.
 sync:

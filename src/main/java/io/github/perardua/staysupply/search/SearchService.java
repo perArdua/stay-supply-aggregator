@@ -1,5 +1,6 @@
 package io.github.perardua.staysupply.search;
 
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.LinkedHashSet;
@@ -43,6 +44,7 @@ public class SearchService {
     private final List<SupplierClient> supplierClientList;
     private final SearchRepository searchRepository;
     private final SearchProperties searchProperties;
+    private final Duration deadline;
 
     public SearchService(List<SupplierClient> supplierClientList,
                          SearchRepository searchRepository,
@@ -50,6 +52,7 @@ public class SearchService {
         this.supplierClientList = supplierClientList;
         this.searchRepository = searchRepository;
         this.searchProperties = searchProperties;
+        this.deadline = Duration.ofMillis(searchProperties.deadlineMillis());
     }
 
     public Mono<SearchResponse> search(AvailabilityQuery query) {
@@ -90,8 +93,11 @@ public class SearchService {
                                 .onErrorResume(SupplierClientException.class,
                                         e -> Mono.just(ChunkResult.failed(e))),
                         searchProperties.maxConcurrentCallsPerSupplier())
+                // 데드라인이 지나면 도착한 청크까지만 받고 나머지는 취소한다.
+                // 모든 공급사가 같은 시점에 구독되므로 검색 시작을 기준으로 잰 것과 같다.
+                .takeUntilOther(Mono.delay(deadline))
                 .collectList()
-                .map(chunkResults -> merge(client.supplier(), chunkResults));
+                .map(chunkResults -> merge(client.supplier(), chunks.size(), chunkResults));
     }
 
     private static List<List<String>> chunk(List<String> codes) {
@@ -102,37 +108,44 @@ public class SearchService {
         return chunks;
     }
 
-    private SupplierResult merge(Supplier supplier, List<ChunkResult> chunkResults) {
+    private SupplierResult merge(Supplier supplier, int expectedChunks, List<ChunkResult> chunkResults) {
         List<SupplierOffer> offers = new ArrayList<>();
-        List<SupplierClientException> failures = new ArrayList<>();
+        List<Failure> failures = new ArrayList<>();
         for (ChunkResult chunkResult : chunkResults) {
             if (chunkResult.failure() == null) {
                 offers.addAll(chunkResult.offers());
             } else {
-                failures.add(chunkResult.failure());
+                failures.add(new Failure(statusOf(chunkResult.failure()), chunkResult.failure().getMessage()));
             }
+        }
+
+        // 데드라인에 잘려 도착하지 못한 청크. 어댑터 타임아웃과 원인은 다르지만
+        // 고객에게 드러나는 결과는 같으므로 같은 상태를 쓴다.
+        for (int i = chunkResults.size(); i < expectedChunks; i++) {
+            failures.add(new Failure(SupplierStatus.Status.TIMEOUT,
+                    "search deadline exceeded before the chunk responded"));
         }
 
         if (failures.isEmpty()) {
             return new SupplierResult(supplier, offers, SupplierStatus.ok(supplier));
         }
 
-        SupplierClientException worst = worst(failures);
+        Failure worst = worst(failures);
         String message = "%d of %d chunks failed (%s): %s"
-                .formatted(failures.size(), chunkResults.size(), statusOf(worst), worst.getMessage());
+                .formatted(failures.size(), expectedChunks, worst.status(), worst.message());
 
         // 하나라도 성공했으면 그 결과는 버리지 않는다.
-        if (failures.size() < chunkResults.size()) {
+        if (failures.size() < expectedChunks) {
             return new SupplierResult(supplier, offers,
                     SupplierStatus.failed(supplier, SupplierStatus.Status.PARTIAL, message));
         }
         return new SupplierResult(supplier, List.of(),
-                SupplierStatus.failed(supplier, statusOf(worst), message));
+                SupplierStatus.failed(supplier, worst.status(), message));
     }
 
-    private static SupplierClientException worst(List<SupplierClientException> failures) {
+    private static Failure worst(List<Failure> failures) {
         return failures.stream()
-                .min(Comparator.comparingInt(e -> FAILURE_PRECEDENCE.indexOf(statusOf(e))))
+                .min(Comparator.comparingInt(failure -> FAILURE_PRECEDENCE.indexOf(failure.status())))
                 .orElseThrow();
     }
 
@@ -189,6 +202,8 @@ public class SearchService {
     }
 
     private record SupplierResult(Supplier supplier, List<SupplierOffer> offers, SupplierStatus status) {}
+
+    private record Failure(SupplierStatus.Status status, String message) {}
 
     private record ChunkResult(List<SupplierOffer> offers, SupplierClientException failure) {
 
