@@ -28,6 +28,11 @@ suppliers:
     connect-timeout-millis: 1000
     overall-timeout-millis: 3000
 
+# 한 공급사에 동시에 나가는 청크 호출 수의 상한.
+# 임시값 - Phase 6에서 커넥션 풀과 함께 확정
+search:
+  max-concurrent-calls-per-supplier: 8
+
 # 공급사 매핑 정기 재동기화. 트래픽이 적은 새벽에 하루 한 번.
 sync:
   cron: "0 0 4 * * *"
