@@ -7,9 +7,13 @@ public record SupplierStatus(
         Status status,
         String message
 ) {
-    public enum Status { OK, PARTIAL, TIMEOUT, SUPPLIER_ERROR }
+    public enum Status { OK, PARTIAL, TIMEOUT, SUPPLIER_ERROR, REQUEST_REJECTED, MALFORMED_RESPONSE }
 
     public static SupplierStatus ok(Supplier supplier) {
         return new SupplierStatus(supplier, Status.OK, null);
+    }
+
+    public static SupplierStatus failed(Supplier supplier, Status status, String message) {
+        return new SupplierStatus(supplier, status, message);
     }
 }

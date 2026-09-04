@@ -8,7 +8,7 @@ import io.github.perardua.staysupply.supplier.Supplier;
  * <p>호출부가 실패 원인을 타입으로 구분할 수 있도록 sealed로 닫는다.
  * 공급사가 늘어도 실패의 종류는 이 넷을 벗어나지 않는다.
  */
-public sealed class SupplierClientException extends RuntimeException
+public sealed abstract class SupplierClientException extends RuntimeException
         permits SupplierTimeoutException,
                 SupplierServerException,
                 SupplierClientErrorException,

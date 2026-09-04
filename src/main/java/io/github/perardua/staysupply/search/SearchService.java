@@ -12,7 +12,12 @@ import org.slf4j.LoggerFactory;
 
 import io.github.perardua.staysupply.adapter.AvailabilityQuery;
 import io.github.perardua.staysupply.adapter.SupplierClient;
+import io.github.perardua.staysupply.adapter.SupplierClientErrorException;
+import io.github.perardua.staysupply.adapter.SupplierClientException;
+import io.github.perardua.staysupply.adapter.SupplierMalformedException;
 import io.github.perardua.staysupply.adapter.SupplierOffer;
+import io.github.perardua.staysupply.adapter.SupplierServerException;
+import io.github.perardua.staysupply.adapter.SupplierTimeoutException;
 import io.github.perardua.staysupply.supplier.Supplier;
 import reactor.core.publisher.Mono;
 
@@ -48,39 +53,37 @@ public class SearchService {
                 .filter(client -> codesBySupplier.containsKey(client.supplier()))
                 .toList();
 
-        List<SupplierStatus> suppliers = queried.stream()
-                .map(client -> SupplierStatus.ok(client.supplier()))
-                .toList();
-
-        List<Mono<SupplierOffers>> calls = queried.stream()
+        List<Mono<SupplierResult>> calls = queried.stream()
                 .map(client -> client
                         .fetchAvailability(codesBySupplier.get(client.supplier()), query)
-                        .map(offers -> new SupplierOffers(client.supplier(), offers)))
+                        .map(offers -> SupplierResult.ok(client.supplier(), offers))
+                        .onErrorResume(SupplierClientException.class,
+                                e -> Mono.just(SupplierResult.failed(client.supplier(), e))))
                 .toList();
 
         if (calls.isEmpty()) {
-            return Mono.just(new SearchResponse(List.of(), suppliers));
+            return Mono.just(new SearchResponse(List.of(), List.of()));
         }
 
-        return Mono.zip(calls, results -> toResponse(results, mappingByKey, suppliers));
+        return Mono.zip(calls, results -> toResponse(results, mappingByKey));
     }
 
-    private SearchResponse toResponse(Object[] results,
-                                      Map<MappingKey, RoomTypeMapping> mappingByKey,
-                                      List<SupplierStatus> suppliers) {
+    private SearchResponse toResponse(Object[] results, Map<MappingKey, RoomTypeMapping> mappingByKey) {
         List<StayOffer> offers = new ArrayList<>();
+        List<SupplierStatus> suppliers = new ArrayList<>();
         Set<MappingKey> unmapped = new LinkedHashSet<>();
 
         for (Object result : results) {
-            SupplierOffers supplierOffers = (SupplierOffers) result;
-            for (SupplierOffer offer : supplierOffers.offers()) {
-                MappingKey key = MappingKey.of(supplierOffers.supplier(), offer);
+            SupplierResult supplierResult = (SupplierResult) result;
+            suppliers.add(supplierResult.status());
+            for (SupplierOffer offer : supplierResult.offers()) {
+                MappingKey key = MappingKey.of(supplierResult.supplier(), offer);
                 RoomTypeMapping mapping = mappingByKey.get(key);
                 if (mapping == null) {
                     unmapped.add(key);
                     continue;
                 }
-                offers.add(toStayOffer(offer, mapping, supplierOffers.supplier()));
+                offers.add(toStayOffer(offer, mapping, supplierResult.supplier()));
             }
         }
 
@@ -89,7 +92,7 @@ public class SearchService {
                     unmapped.size(), unmapped.stream().limit(UNMAPPED_LOG_SAMPLE).toList());
         }
 
-        return new SearchResponse(List.copyOf(offers), suppliers);
+        return new SearchResponse(List.copyOf(offers), List.copyOf(suppliers));
     }
 
     private StayOffer toStayOffer(SupplierOffer offer, RoomTypeMapping mapping, Supplier supplier) {
@@ -107,7 +110,26 @@ public class SearchService {
                 supplier);
     }
 
-    private record SupplierOffers(Supplier supplier, List<SupplierOffer> offers) {}
+    private record SupplierResult(Supplier supplier, List<SupplierOffer> offers, SupplierStatus status) {
+
+        static SupplierResult ok(Supplier supplier, List<SupplierOffer> offers) {
+            return new SupplierResult(supplier, offers, SupplierStatus.ok(supplier));
+        }
+
+        static SupplierResult failed(Supplier supplier, SupplierClientException e) {
+            return new SupplierResult(
+                    supplier, List.of(), SupplierStatus.failed(supplier, statusOf(e), e.getMessage()));
+        }
+
+        private static SupplierStatus.Status statusOf(SupplierClientException e) {
+            return switch (e) {
+                case SupplierTimeoutException ignored -> SupplierStatus.Status.TIMEOUT;
+                case SupplierServerException ignored -> SupplierStatus.Status.SUPPLIER_ERROR;
+                case SupplierClientErrorException ignored -> SupplierStatus.Status.REQUEST_REJECTED;
+                case SupplierMalformedException ignored -> SupplierStatus.Status.MALFORMED_RESPONSE;
+            };
+        }
+    }
 
     private record MappingKey(Supplier supplier, String supplierPropertyCode, String supplierRoomTypeCode) {
 
