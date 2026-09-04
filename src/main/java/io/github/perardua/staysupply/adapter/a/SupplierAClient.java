@@ -15,8 +15,10 @@ import io.github.perardua.staysupply.adapter.SupplierClient;
 import io.github.perardua.staysupply.adapter.SupplierClientErrorException;
 import io.github.perardua.staysupply.adapter.SupplierClientException;
 import io.github.perardua.staysupply.adapter.SupplierMalformedException;
+import io.github.perardua.staysupply.adapter.SupplierOffer;
 import io.github.perardua.staysupply.adapter.SupplierServerException;
 import io.github.perardua.staysupply.adapter.SupplierTimeoutException;
+import io.github.perardua.staysupply.search.SearchQuery;
 import io.github.perardua.staysupply.supplier.Supplier;
 import reactor.core.publisher.Mono;
 
@@ -66,6 +68,12 @@ public class SupplierAClient implements SupplierClient {
             return List.of();
         }
         return response.items().stream().map(this::toListing).toList();
+    }
+
+    @Override
+    public Mono<List<SupplierOffer>> fetchAvailability(List<String> supplierCodes, SearchQuery query) {
+        // TODO: 다음 단계에서 구현
+        throw new UnsupportedOperationException("fetchAvailability is not implemented yet");
     }
 
     private static boolean hasCause(Throwable throwable, Class<? extends Throwable> type) {

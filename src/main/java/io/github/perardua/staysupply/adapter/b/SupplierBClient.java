@@ -15,9 +15,12 @@ import io.github.perardua.staysupply.adapter.SupplierClient;
 import io.github.perardua.staysupply.adapter.SupplierClientErrorException;
 import io.github.perardua.staysupply.adapter.SupplierClientException;
 import io.github.perardua.staysupply.adapter.SupplierMalformedException;
+import io.github.perardua.staysupply.adapter.SupplierOffer;
 import io.github.perardua.staysupply.adapter.SupplierServerException;
 import io.github.perardua.staysupply.adapter.SupplierTimeoutException;
+import io.github.perardua.staysupply.search.SearchQuery;
 import io.github.perardua.staysupply.supplier.Supplier;
+import reactor.core.publisher.Mono;
 
 /**
  * B는 장애 상황에서도 HTTP 200을 내려준다.
@@ -81,6 +84,12 @@ public class SupplierBClient implements SupplierClient {
         }
 
         return envelope.data().items().stream().map(this::toListing).toList();
+    }
+
+    @Override
+    public Mono<List<SupplierOffer>> fetchAvailability(List<String> supplierCodes, SearchQuery query) {
+        // TODO: 다음 단계에서 구현
+        throw new UnsupportedOperationException("fetchAvailability is not implemented yet");
     }
 
     private void verifyResultCode(String resultCode, String resultMessage) {
