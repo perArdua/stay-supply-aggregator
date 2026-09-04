@@ -16,24 +16,29 @@ spring:
         in-tests: false
 
 # 로컬 기본값은 Mock Supplier(9090). 실제 공급사 주소는 환경변수로 덮어쓴다.
+# 각 항목은 공급사마다 다른 값을 사용해야 함
+# 하지만 Mock 환경이기 때문에 timeout 값을 다르게 둘 근거를 못찾았기 때문에
+# timeout은 같은 값으로 둠
+# api-key도 마찬가지임
+# 다만, base-url은 다르게 둘 가치가 있다고 판단했기 때문에 다르게 둠
 suppliers:
   a:
     base-url: http://localhost:9090
     api-key: dummy-key
     connect-timeout-millis: 1000   # TCP 연결 수립까지
-    overall-timeout-millis: 3000   # 요청 시작~응답 완료 총 상한. 임시값 - 견고성 단계에서 확정
+    overall-timeout-millis: 500   # 요청 시작~응답 완료 총 상한
   b:
-    base-url: http://localhost:9090
+    base-url: http://localhost:9091
     api-key: dummy-key
     connect-timeout-millis: 1000
-    overall-timeout-millis: 3000
+    overall-timeout-millis: 500
 
 # 한 공급사에 동시에 나가는 청크 호출 수의 상한.
-# 임시값 - Phase 6에서 커넥션 풀과 함께 확정
+# 공급사에서 숙소 4000개에 대한 정보를 준다고 가정했을 때 데드라인 안에 처리하려면 최소 8로 두어야 함
+# 다만 테스트를 해보았을 때 약 5 ~ 6초 사이로 나오므로 넉넉잡아 10으로 설정함
+# Mock 환경이기 때문에 deadline 시간은 5초라고 전제로 깔아둠
 search:
-  max-concurrent-calls-per-supplier: 8
-  # 검색 요청 전체의 상한. 공급사 호출 하나당 상한(overall-timeout-millis)보다 커야
-  # 배치가 나뉠 때 뒤 배치가 나갈 시간이 남는다. 임시값 - Phase 6에서 확정
+  max-concurrent-calls-per-supplier: 10
   deadline-millis: 5000
 
 # 공급사 매핑 정기 재동기화. 트래픽이 적은 새벽에 하루 한 번.
