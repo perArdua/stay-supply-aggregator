@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import io.github.perardua.staysupply.adapter.AvailabilityQuery;
+import reactor.core.publisher.Mono;
 
 @Profile("!mock")
 @RestController
@@ -26,7 +27,7 @@ public class SearchController {
     }
 
     @GetMapping("/search")
-    public ResponseEntity<?> search(
+    public Mono<ResponseEntity<?>> search(
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate checkIn,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate checkOut,
             @RequestParam int adults,
@@ -34,9 +35,11 @@ public class SearchController {
 
         AvailabilityQuery query = new AvailabilityQuery(checkIn, checkOut, adults, children);
 
-        // 서블릿 워커 스레드라 block()이 이벤트 루프를 막지는 않는다.
-        SearchResponse response = searchService.search(query).block();
+        // Mono를 그대로 돌려주어 워커 스레드가 응답까지 점유되지 않게 한다.
+        return searchService.search(query).map(SearchController::toResponseEntity);
+    }
 
+    private static ResponseEntity<?> toResponseEntity(SearchResponse response) {
         if (response.allSuppliersFailed()) {
             return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
                     .body(SearchErrorResponse.allSuppliersFailed(response.suppliers()));
