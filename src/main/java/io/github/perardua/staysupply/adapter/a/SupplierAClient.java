@@ -9,6 +9,7 @@ import org.springframework.http.HttpStatusCode;
 import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.client.WebClient;
 
+import io.github.perardua.staysupply.adapter.AvailabilityQuery;
 import io.github.perardua.staysupply.adapter.PropertyListing;
 import io.github.perardua.staysupply.adapter.RoomTypeListing;
 import io.github.perardua.staysupply.adapter.SupplierClient;
@@ -18,7 +19,6 @@ import io.github.perardua.staysupply.adapter.SupplierMalformedException;
 import io.github.perardua.staysupply.adapter.SupplierOffer;
 import io.github.perardua.staysupply.adapter.SupplierServerException;
 import io.github.perardua.staysupply.adapter.SupplierTimeoutException;
-import io.github.perardua.staysupply.search.SearchQuery;
 import io.github.perardua.staysupply.supplier.Supplier;
 import reactor.core.publisher.Mono;
 
@@ -71,7 +71,7 @@ public class SupplierAClient implements SupplierClient {
     }
 
     @Override
-    public Mono<List<SupplierOffer>> fetchAvailability(List<String> supplierCodes, SearchQuery query) {
+    public Mono<List<SupplierOffer>> fetchAvailability(List<String> supplierCodes, AvailabilityQuery query) {
         // TODO: 다음 단계에서 구현
         throw new UnsupportedOperationException("fetchAvailability is not implemented yet");
     }

@@ -1,6 +1,5 @@
 package io.github.perardua.staysupply.adapter;
 
-import io.github.perardua.staysupply.search.SearchQuery;
 import io.github.perardua.staysupply.supplier.Supplier;
 
 import java.util.List;
@@ -13,5 +12,5 @@ public interface SupplierClient {
 
     List<PropertyListing> fetchProperties();
 
-    Mono<List<SupplierOffer>> fetchAvailability(List<String> supplierCodes, SearchQuery query);
+    Mono<List<SupplierOffer>> fetchAvailability(List<String> supplierCodes, AvailabilityQuery query);
 }
