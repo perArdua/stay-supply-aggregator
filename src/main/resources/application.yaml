@@ -76,6 +76,10 @@ resilience4j:
         # 검색 하나가 청크를 동시에 내보내므로 정원을 키우면 회복 중인 공급사가 그만큼을 한꺼번에 받게 되고 멀티 인스턴스면 인스턴스 수를 곱한 만큼 받게 됨
         permittedNumberOfCallsInHalfOpenState: 1
         automaticTransitionFromOpenToHalfOpenEnabled: true
+        # 커넥션 풀 포화는 우리 쪽 자원 부족이라 공급사의 실패율에 넣지 않는다.
+        # 넣으면 부하가 서킷을 열고, 부하가 걷힌 뒤에도 그 공급사를 대기 시간만큼 더 막는다
+        ignoreExceptions:
+          - io.github.perardua.staysupply.adapter.SupplierPoolExhaustedException
 
 # 공급사 매핑 정기 재동기화. 트래픽이 적은 새벽에 하루 한 번.
 sync:

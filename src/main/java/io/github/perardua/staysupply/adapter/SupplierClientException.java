@@ -13,7 +13,8 @@ public sealed abstract class SupplierClientException extends RuntimeException
                 SupplierServerException,
                 SupplierClientErrorException,
                 SupplierMalformedException,
-                SupplierCircuitOpenException {
+                SupplierCircuitOpenException,
+                SupplierPoolExhaustedException {
 
     private final Supplier supplier;
 

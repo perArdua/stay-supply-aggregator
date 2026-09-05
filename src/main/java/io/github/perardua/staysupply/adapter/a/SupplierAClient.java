@@ -20,6 +20,7 @@ import io.github.perardua.staysupply.adapter.SupplierClientErrorException;
 import io.github.perardua.staysupply.adapter.SupplierClientException;
 import io.github.perardua.staysupply.adapter.SupplierMalformedException;
 import io.github.perardua.staysupply.adapter.SupplierOffer;
+import io.github.perardua.staysupply.adapter.SupplierPoolExhaustedException;
 import io.github.perardua.staysupply.adapter.SupplierServerException;
 import io.github.perardua.staysupply.adapter.SupplierTimeoutException;
 import io.github.perardua.staysupply.supplier.Supplier;
@@ -61,6 +62,11 @@ public class SupplierAClient implements SupplierClient {
             throw e;
         } catch (Exception e) {
             // block()은 검사 예외를 ReactiveException으로 감싸므로 원인 사슬을 따라간다.
+            // 풀 포화를 먼저 본다. 풀의 획득 타임아웃은 TimeoutException이라 순서를 바꾸면 가려진다.
+            if (SupplierPoolExhaustedException.isPoolExhaustion(e)) {
+                throw new SupplierPoolExhaustedException(Supplier.A,
+                        "connection pool exhausted - hotels API call not attempted", e);
+            }
             if (hasCause(e, TimeoutException.class)) {
                 throw new SupplierTimeoutException(Supplier.A, "hotels API timed out", e);
             }
@@ -99,6 +105,11 @@ public class SupplierAClient implements SupplierClient {
     }
 
     private SupplierClientException toSupplierException(Throwable e) {
+        // 풀 포화를 먼저 본다. 풀의 획득 타임아웃은 TimeoutException이라 순서를 바꾸면 가려진다.
+        if (SupplierPoolExhaustedException.isPoolExhaustion(e)) {
+            return new SupplierPoolExhaustedException(Supplier.A,
+                    "connection pool exhausted - availability API call not attempted", e);
+        }
         if (hasCause(e, TimeoutException.class)) {
             return new SupplierTimeoutException(Supplier.A, "availability API timed out", e);
         }

@@ -24,6 +24,7 @@ import io.github.perardua.staysupply.adapter.SupplierClientErrorException;
 import io.github.perardua.staysupply.adapter.SupplierClientException;
 import io.github.perardua.staysupply.adapter.SupplierMalformedException;
 import io.github.perardua.staysupply.adapter.SupplierOffer;
+import io.github.perardua.staysupply.adapter.SupplierPoolExhaustedException;
 import io.github.perardua.staysupply.adapter.SupplierServerException;
 import io.github.perardua.staysupply.adapter.SupplierTimeoutException;
 import io.github.perardua.staysupply.supplier.Supplier;
@@ -45,6 +46,8 @@ public class SearchService {
 
     // 청크가 전부 실패했을 때 공급사 상태로 올릴 순서. 앞일수록 우선한다.
     private static final List<SupplierStatus.Status> FAILURE_PRECEDENCE = List.of(
+            // 우리 쪽 자원 부족이 다른 실패들의 원인일 수 있으므로 먼저 보여준다.
+            SupplierStatus.Status.POOL_EXHAUSTED,
             SupplierStatus.Status.REQUEST_REJECTED,
             SupplierStatus.Status.MALFORMED_RESPONSE,
             SupplierStatus.Status.TIMEOUT,
@@ -181,6 +184,7 @@ public class SearchService {
             case SupplierClientErrorException ignored -> SupplierStatus.Status.REQUEST_REJECTED;
             case SupplierMalformedException ignored -> SupplierStatus.Status.MALFORMED_RESPONSE;
             case SupplierCircuitOpenException ignored -> SupplierStatus.Status.CIRCUIT_OPEN;
+            case SupplierPoolExhaustedException ignored -> SupplierStatus.Status.POOL_EXHAUSTED;
         };
     }
 
