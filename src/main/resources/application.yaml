@@ -58,7 +58,9 @@ resilience4j:
         # 절반 이상 실패면 정상이 아니라고 판단
         failureRateThreshold: 50
         waitDurationInOpenState: 30s
-        permittedNumberOfCallsInHalfOpenState: 5
+        # 프로브는 공급사가 살아났는지 보는 것이 목적이라 실제 작업을 여러 건 보낼 이유가 없음
+        # 검색 하나가 청크를 동시에 내보내므로 정원을 키우면 회복 중인 공급사가 그만큼을 한꺼번에 받게 되고 멀티 인스턴스면 인스턴스 수를 곱한 만큼 받게 됨
+        permittedNumberOfCallsInHalfOpenState: 1
         automaticTransitionFromOpenToHalfOpenEnabled: true
 
 # 공급사 매핑 정기 재동기화. 트래픽이 적은 새벽에 하루 한 번.
