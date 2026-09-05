@@ -15,6 +15,14 @@ spring:
       skip:
         in-tests: false
 
+# 기동 중 readiness가 닫혀 있다가 ApplicationRunner가 끝나면 열리는 동작에 기대므로
+# 기본값에 맡기지 않고 명시한다. 부트 4는 기본이 켬이지만 버전에 따라 달라져 왔다
+management:
+  endpoint:
+    health:
+      probes:
+        enabled: true
+
 # 로컬 기본값은 Mock Supplier(9090). 실제 공급사 주소는 환경변수로 덮어쓴다.
 # 각 항목은 공급사마다 다른 값을 사용해야 함
 # 하지만 Mock 환경이기 때문에 timeout 값을 다르게 둘 근거를 못찾았기 때문에
