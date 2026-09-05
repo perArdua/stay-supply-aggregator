@@ -8,6 +8,7 @@ public record SupplierAProperties(
         String apiKey,
         int connectTimeoutMillis,
         int propertyListTimeoutMillis,
-        int availabilityTimeoutMillis
+        int availabilityTimeoutMillis,
+        int maxConnections
 ) {
 }

@@ -38,16 +38,21 @@ suppliers:
     property-list-timeout-millis: 10000
     # 재고 조회는 검색마다 부르고 고객 대기 시간에 그대로 묶이므로 공급사 SLA 상한을 쓴다
     availability-timeout-millis: 500
+    # 검색 한 건이 이 공급사에 최대 10개(동시 호출 상한)의 커넥션을 쓴다.
+    # 동시 검색 10건을 가정해 10 x 10 으로 잡았다. 동시 검색 수는 트래픽 데이터가 없어 가정한 값이다
+    max-connections: 100
   b:
     base-url: http://localhost:9091
     api-key: dummy-key
     connect-timeout-millis: 1000
     property-list-timeout-millis: 10000
     availability-timeout-millis: 500
+    max-connections: 100
 
 # 한 공급사에 동시에 나가는 청크 호출 수의 상한.
-# 공급사에서 숙소 4000개에 대한 정보를 준다고 가정했을 때 데드라인 안에 처리하려면 최소 8로 두어야 함
-# 다만 테스트를 해보았을 때 약 5 ~ 6초 사이로 나오므로 넉넉잡아 10으로 설정함
+# 이 값은 커넥션 풀에서 도출되지 않는다. 반대로 이 값이 공급사별 풀 크기를 정한다
+# 데드라인 2초에서 고정 비용 23ms를 빼고 호출 상한 500ms로 나누면 3번까지 나누어 보낼 수 있고,
+# 여기에 이 값과 청크당 숙소 50개를 곱한 1500개가 한 번의 검색이 다룰 수 있는 숙소 수가 됨
 # Mock 환경이기 때문에 deadline 시간은 2초라고 전제로 깔아둠
 # 최악의 서버 상황에서 고객이 최대한 기다릴 수 있는 시간이 2초라고 가정한 것임
 search:
