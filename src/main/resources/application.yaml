@@ -26,12 +26,16 @@ suppliers:
     base-url: http://localhost:9090
     api-key: dummy-key
     connect-timeout-millis: 1000   # TCP 연결 수립까지
-    overall-timeout-millis: 500
+    # 숙소 목록은 하루 한 번 배치로 부르고 고객이 기다리지 않으므로 크게 잡는다
+    property-list-timeout-millis: 10000
+    # 재고 조회는 검색마다 부르고 고객 대기 시간에 그대로 묶이므로 공급사 SLA 상한을 쓴다
+    availability-timeout-millis: 500
   b:
     base-url: http://localhost:9091
     api-key: dummy-key
     connect-timeout-millis: 1000
-    overall-timeout-millis: 500
+    property-list-timeout-millis: 10000
+    availability-timeout-millis: 500
 
 # 한 공급사에 동시에 나가는 청크 호출 수의 상한.
 # 공급사에서 숙소 4000개에 대한 정보를 준다고 가정했을 때 데드라인 안에 처리하려면 최소 8로 두어야 함

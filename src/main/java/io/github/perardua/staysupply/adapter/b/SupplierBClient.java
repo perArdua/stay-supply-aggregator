@@ -35,11 +35,13 @@ public class SupplierBClient implements SupplierClient {
     private static final String RESULT_CODE_SUCCESS = "0000";
 
     private final WebClient webClient;
-    private final Duration overallTimeout;
+    private final Duration propertyListTimeout;
+    private final Duration availabilityTimeout;
 
     public SupplierBClient(WebClient supplierBWebClient, SupplierBProperties properties) {
         this.webClient = supplierBWebClient;
-        this.overallTimeout = Duration.ofMillis(properties.overallTimeoutMillis());
+        this.propertyListTimeout = Duration.ofMillis(properties.propertyListTimeoutMillis());
+        this.availabilityTimeout = Duration.ofMillis(properties.availabilityTimeoutMillis());
     }
 
     @Override
@@ -55,7 +57,7 @@ public class SupplierBClient implements SupplierClient {
                     .uri("/b/api/properties")
                     .retrieve()
                     .bodyToMono(BEnvelope.class)
-                    .timeout(overallTimeout)
+                    .timeout(propertyListTimeout)
                     .block();
         } catch (SupplierClientException e) {
             throw e;
@@ -102,7 +104,7 @@ public class SupplierBClient implements SupplierClient {
                         .build())
                 .retrieve()
                 .bodyToMono(BSearchEnvelope.class)
-                .timeout(overallTimeout)
+                .timeout(availabilityTimeout)
                 // resultCode 검사를 map 안에 두어 실패가 구독 시점에 나도록 한다.
                 .map(envelope -> toOffers(envelope, query))
                 .switchIfEmpty(Mono.error(() -> new SupplierMalformedException(

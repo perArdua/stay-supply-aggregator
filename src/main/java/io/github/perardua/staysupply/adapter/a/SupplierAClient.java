@@ -29,11 +29,13 @@ import reactor.core.publisher.Mono;
 public class SupplierAClient implements SupplierClient {
 
     private final WebClient webClient;
-    private final Duration overallTimeout;
+    private final Duration propertyListTimeout;
+    private final Duration availabilityTimeout;
 
     public SupplierAClient(WebClient supplierAWebClient, SupplierAProperties properties) {
         this.webClient = supplierAWebClient;
-        this.overallTimeout = Duration.ofMillis(properties.overallTimeoutMillis());
+        this.propertyListTimeout = Duration.ofMillis(properties.propertyListTimeoutMillis());
+        this.availabilityTimeout = Duration.ofMillis(properties.availabilityTimeoutMillis());
     }
 
     @Override
@@ -53,7 +55,7 @@ public class SupplierAClient implements SupplierClient {
                     .onStatus(HttpStatusCode::is5xxServerError, r -> Mono.error(new SupplierServerException(
                             Supplier.A, "hotel API responded " + r.statusCode(), null)))
                     .bodyToMono(AHotelsResponse.class)
-                    .timeout(overallTimeout)
+                    .timeout(propertyListTimeout)
                     .block();
         } catch (SupplierClientException e) {
             throw e;
@@ -90,7 +92,7 @@ public class SupplierAClient implements SupplierClient {
                 .onStatus(HttpStatusCode::is5xxServerError, r -> Mono.error(new SupplierServerException(
                         Supplier.A, "availability API responded " + r.statusCode(), null)))
                 .bodyToMono(AAvailabilityResponse.class)
-                .timeout(overallTimeout)
+                .timeout(availabilityTimeout)
                 .map(response -> toOffers(response, query))
                 .defaultIfEmpty(List.of())
                 .onErrorMap(e -> !(e instanceof SupplierClientException), this::toSupplierException);

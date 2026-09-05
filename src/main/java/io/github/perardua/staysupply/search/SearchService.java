@@ -40,6 +40,8 @@ public class SearchService {
     // 공급사 재고 요금 API가 한 번에 받는 숙소 코드 수의 상한. 넘기면 공급사가 요청을 거부한다.
     private static final int MAX_CODES_PER_CALL = 50;
 
+    // 서킷은 재고 조회 호출에만 걸린다. 인스턴스 이름에 그 사실을 드러낸다.
+    private static final String AVAILABILITY_CIRCUIT_SUFFIX = "-availability";
 
     // 청크가 전부 실패했을 때 공급사 상태로 올릴 순서. 앞일수록 우선한다.
     private static final List<SupplierStatus.Status> FAILURE_PRECEDENCE = List.of(
@@ -98,7 +100,7 @@ public class SearchService {
         List<List<String>> chunks = chunk(codes);
 
         // flatMapSequential은 동시에 호출하되 결과는 청크 순서대로 내보낸다.
-        CircuitBreaker circuitBreaker = circuitBreakerRegistry.circuitBreaker(client.supplier().name());
+        CircuitBreaker circuitBreaker = availabilityCircuitBreaker(client.supplier());
 
         return Flux.fromIterable(chunks)
                 .flatMapSequential(chunk -> client.fetchAvailability(chunk, query)
@@ -116,6 +118,10 @@ public class SearchService {
                 .takeUntilOther(Mono.delay(deadline))
                 .collectList()
                 .map(chunkResults -> merge(client.supplier(), chunks.size(), chunkResults));
+    }
+
+    private CircuitBreaker availabilityCircuitBreaker(Supplier supplier) {
+        return circuitBreakerRegistry.circuitBreaker(supplier.name() + AVAILABILITY_CIRCUIT_SUFFIX);
     }
 
     private static List<List<String>> chunk(List<String> codes) {

@@ -7,6 +7,7 @@ public record SupplierBProperties(
         String baseUrl,
         String apiKey,
         int connectTimeoutMillis,
-        int overallTimeoutMillis
+        int propertyListTimeoutMillis,
+        int availabilityTimeoutMillis
 ) {
 }
