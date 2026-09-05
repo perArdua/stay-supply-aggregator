@@ -8,6 +8,8 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Profile;
 import org.springframework.jdbc.core.simple.JdbcClient;
 
+import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry;
+
 import io.github.perardua.staysupply.adapter.SupplierClient;
 
 @Configuration
@@ -23,7 +25,9 @@ public class SearchConfig {
     @Bean
     public SearchService searchService(List<SupplierClient> supplierClientList,
                                        SearchRepository searchRepository,
-                                       SearchProperties searchProperties) {
-        return new SearchService(supplierClientList, searchRepository, searchProperties);
+                                       SearchProperties searchProperties,
+                                       CircuitBreakerRegistry circuitBreakerRegistry) {
+        return new SearchService(
+                supplierClientList, searchRepository, searchProperties, circuitBreakerRegistry);
     }
 }

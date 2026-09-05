@@ -12,7 +12,13 @@ import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import io.github.resilience4j.circuitbreaker.CallNotPermittedException;
+import io.github.resilience4j.circuitbreaker.CircuitBreaker;
+import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry;
+import io.github.resilience4j.reactor.circuitbreaker.operator.CircuitBreakerOperator;
+
 import io.github.perardua.staysupply.adapter.AvailabilityQuery;
+import io.github.perardua.staysupply.adapter.SupplierCircuitOpenException;
 import io.github.perardua.staysupply.adapter.SupplierClient;
 import io.github.perardua.staysupply.adapter.SupplierClientErrorException;
 import io.github.perardua.staysupply.adapter.SupplierClientException;
@@ -34,24 +40,29 @@ public class SearchService {
     // 공급사 재고 요금 API가 한 번에 받는 숙소 코드 수의 상한. 넘기면 공급사가 요청을 거부한다.
     private static final int MAX_CODES_PER_CALL = 50;
 
+
     // 청크가 전부 실패했을 때 공급사 상태로 올릴 순서. 앞일수록 우선한다.
     private static final List<SupplierStatus.Status> FAILURE_PRECEDENCE = List.of(
             SupplierStatus.Status.REQUEST_REJECTED,
             SupplierStatus.Status.MALFORMED_RESPONSE,
             SupplierStatus.Status.TIMEOUT,
-            SupplierStatus.Status.SUPPLIER_ERROR);
+            SupplierStatus.Status.SUPPLIER_ERROR,
+            SupplierStatus.Status.CIRCUIT_OPEN);
 
     private final List<SupplierClient> supplierClientList;
     private final SearchRepository searchRepository;
     private final SearchProperties searchProperties;
+    private final CircuitBreakerRegistry circuitBreakerRegistry;
     private final Duration deadline;
 
     public SearchService(List<SupplierClient> supplierClientList,
                          SearchRepository searchRepository,
-                         SearchProperties searchProperties) {
+                         SearchProperties searchProperties,
+                         CircuitBreakerRegistry circuitBreakerRegistry) {
         this.supplierClientList = supplierClientList;
         this.searchRepository = searchRepository;
         this.searchProperties = searchProperties;
+        this.circuitBreakerRegistry = circuitBreakerRegistry;
         this.deadline = Duration.ofMillis(searchProperties.deadlineMillis());
     }
 
@@ -87,8 +98,15 @@ public class SearchService {
         List<List<String>> chunks = chunk(codes);
 
         // flatMapSequential은 동시에 호출하되 결과는 청크 순서대로 내보낸다.
+        CircuitBreaker circuitBreaker = circuitBreakerRegistry.circuitBreaker(client.supplier().name());
+
         return Flux.fromIterable(chunks)
                 .flatMapSequential(chunk -> client.fetchAvailability(chunk, query)
+                                // 청크 단위로 건다. 실패를 세는 단위가 청크여야 "80개 중 몇 개"가 뜻을 갖는다.
+                                .transformDeferred(CircuitBreakerOperator.of(circuitBreaker))
+                                .onErrorMap(CallNotPermittedException.class,
+                                        e -> new SupplierCircuitOpenException(client.supplier(),
+                                                "circuit is open - call not attempted", e))
                                 .map(ChunkResult::ok)
                                 .onErrorResume(SupplierClientException.class,
                                         e -> Mono.just(ChunkResult.failed(e))),
@@ -156,6 +174,7 @@ public class SearchService {
             case SupplierServerException ignored -> SupplierStatus.Status.SUPPLIER_ERROR;
             case SupplierClientErrorException ignored -> SupplierStatus.Status.REQUEST_REJECTED;
             case SupplierMalformedException ignored -> SupplierStatus.Status.MALFORMED_RESPONSE;
+            case SupplierCircuitOpenException ignored -> SupplierStatus.Status.CIRCUIT_OPEN;
         };
     }
 

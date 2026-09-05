@@ -26,7 +26,7 @@ suppliers:
     base-url: http://localhost:9090
     api-key: dummy-key
     connect-timeout-millis: 1000   # TCP 연결 수립까지
-    overall-timeout-millis: 500   # 요청 시작~응답 완료 총 상한
+    overall-timeout-millis: 500
   b:
     base-url: http://localhost:9091
     api-key: dummy-key
@@ -40,6 +40,22 @@ suppliers:
 search:
   max-concurrent-calls-per-supplier: 10
   deadline-millis: 5000
+
+# 죽은 공급사에 청크를 계속 던지지 않도록 공급사별로 서킷을 둔다.
+# 인스턴스는 공급사 이름으로 실행 중에 만들어지므로 default 하나만 정의한다.
+resilience4j:
+  circuitbreaker:
+    configs:
+      default:
+        slidingWindowType: COUNT_BASED
+        # 동시 호출 상한 값과 같게 설정
+        slidingWindowSize: 10
+        minimumNumberOfCalls: 10
+        # 절반 이상 실패면 정상이 아니라고 판단
+        failureRateThreshold: 50
+        waitDurationInOpenState: 30s
+        permittedNumberOfCallsInHalfOpenState: 5
+        automaticTransitionFromOpenToHalfOpenEnabled: true
 
 # 공급사 매핑 정기 재동기화. 트래픽이 적은 새벽에 하루 한 번.
 sync:
