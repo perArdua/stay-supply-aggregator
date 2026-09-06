@@ -34,6 +34,7 @@ public class MockSupplierController {
     private static final String ERROR = "error";
     private static final String NO_RESPONSE = "no-response";
     private static final String DELAY = "delay";
+    private static final String EMPTY = "empty";
 
     private static final long NO_RESPONSE_MILLIS = 30_000L;
     private static final long DELAY_MILLIS = 5_000L;
@@ -50,6 +51,9 @@ public class MockSupplierController {
     // ── ① 숙소 목록 (정적 콘텐츠) ─────────────────────────────────
     @GetMapping(value = "/a/v1/hotels", produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<String> hotelsA() {
+        if (EMPTY.equals(modes.get(SUPPLIER_A))) {
+            return ResponseEntity.ok("{\"items\":[]}");
+        }
         return respond(SUPPLIER_A, A_HOTELS);
     }
 
