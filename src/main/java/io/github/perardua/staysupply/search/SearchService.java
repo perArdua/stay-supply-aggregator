@@ -22,6 +22,7 @@ import io.github.perardua.staysupply.adapter.SupplierCircuitOpenException;
 import io.github.perardua.staysupply.adapter.SupplierClient;
 import io.github.perardua.staysupply.adapter.SupplierClientErrorException;
 import io.github.perardua.staysupply.adapter.SupplierClientException;
+import io.github.perardua.staysupply.adapter.SupplierCodeChunks;
 import io.github.perardua.staysupply.adapter.SupplierMalformedException;
 import io.github.perardua.staysupply.adapter.SupplierOffer;
 import io.github.perardua.staysupply.adapter.SupplierPoolExhaustedException;
@@ -37,9 +38,6 @@ public class SearchService {
 
     // 매핑이 어긋나면 누락 항목이 응답 크기만큼 나올 수 있어 로그 한 줄이 비대해져서 상한을 둠
     private static final int UNMAPPED_LOG_SAMPLE = 10;
-
-    // 공급사 재고 요금 API가 한 번에 받는 숙소 코드 수의 상한. 넘기면 공급사가 요청을 거부한다.
-    private static final int MAX_CODES_PER_CALL = 50;
 
     // 서킷은 재고 조회 호출에만 걸린다. 인스턴스 이름에 그 사실을 드러낸다.
     private static final String AVAILABILITY_CIRCUIT_SUFFIX = "-availability";
@@ -100,7 +98,7 @@ public class SearchService {
     }
 
     private Mono<SupplierResult> callSupplier(SupplierClient client, List<String> codes, AvailabilityQuery query) {
-        List<List<String>> chunks = chunk(codes);
+        List<List<String>> chunks = SupplierCodeChunks.chunk(codes);
 
         // flatMapSequential은 동시에 호출하되 결과는 청크 순서대로 내보낸다.
         CircuitBreaker circuitBreaker = availabilityCircuitBreaker(client.supplier());
@@ -125,14 +123,6 @@ public class SearchService {
 
     private CircuitBreaker availabilityCircuitBreaker(Supplier supplier) {
         return circuitBreakerRegistry.circuitBreaker(supplier.name() + AVAILABILITY_CIRCUIT_SUFFIX);
-    }
-
-    private static List<List<String>> chunk(List<String> codes) {
-        List<List<String>> chunks = new ArrayList<>();
-        for (int from = 0; from < codes.size(); from += MAX_CODES_PER_CALL) {
-            chunks.add(codes.subList(from, Math.min(from + MAX_CODES_PER_CALL, codes.size())));
-        }
-        return chunks;
     }
 
     private SupplierResult merge(Supplier supplier, int expectedChunks, List<ChunkResult> chunkResults) {

@@ -13,6 +13,7 @@ import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.reactive.function.client.WebClientResponseException;
 
 import io.github.perardua.staysupply.adapter.AvailabilityQuery;
+import io.github.perardua.staysupply.adapter.NightlyAvailability;
 import io.github.perardua.staysupply.adapter.PropertyListing;
 import io.github.perardua.staysupply.adapter.RoomTypeListing;
 import io.github.perardua.staysupply.adapter.SupplierClient;
@@ -158,7 +159,7 @@ public class SupplierBClient implements SupplierClient {
                 item.roomId(),
                 item.roomName(),
                 item.maxOccupancy(),
-                availableRooms(remainingRoomsByDate(item, inventory), query),
+                NightlyAvailability.availableRooms(remainingRoomsByDate(item, inventory), query),
                 item.breakfastIncluded(),
                 item.currency(),
                 item.totalPrice(),
@@ -180,15 +181,6 @@ public class SupplierBClient implements SupplierClient {
             }
         }
         return remainingByDate;
-    }
-
-    private int availableRooms(Map<LocalDate, Integer> remainingByDate, AvailabilityQuery query) {
-        int minimum = Integer.MAX_VALUE;
-        for (LocalDate night = query.checkIn(); night.isBefore(query.checkOut()); night = night.plusDays(1)) {
-            minimum = Math.min(minimum, remainingByDate.getOrDefault(night, 0));
-        }
-
-        return minimum;
     }
 
     private void verifyResultCode(String api, String resultCode, String resultMessage) {

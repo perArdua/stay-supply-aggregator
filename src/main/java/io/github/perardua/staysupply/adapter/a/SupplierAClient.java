@@ -13,6 +13,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.client.WebClient;
 
 import io.github.perardua.staysupply.adapter.AvailabilityQuery;
+import io.github.perardua.staysupply.adapter.NightlyAvailability;
 import io.github.perardua.staysupply.adapter.PropertyListing;
 import io.github.perardua.staysupply.adapter.RoomTypeListing;
 import io.github.perardua.staysupply.adapter.SupplierClient;
@@ -132,13 +133,7 @@ public class SupplierAClient implements SupplierClient {
         // 중복 날짜는 요금까지 이중으로 더해지므로 합산에 들어가기 전에 걸러낸다.
         Map<LocalDate, Integer> remainingByDate = remainingRoomsByDate(item, dailyRates);
 
-        // A는 날짜별 세금 별도 단가를 주므로 기간 전체 총액으로 합산한다.
-        long totalAmountIncludingTax = 0L;
-        long taxAmount = 0L;
-        for (ADailyRate rate : dailyRates) {
-            totalAmountIncludingTax += rate.nightlyRate() + rate.taxAmount();
-            taxAmount += rate.taxAmount();
-        }
+        AFare fare = AFare.of(dailyRates, query);
 
         return new SupplierOffer(
                 item.hotelCode(),
@@ -146,11 +141,11 @@ public class SupplierAClient implements SupplierClient {
                 item.roomTypeCode(),
                 item.roomTypeName(),
                 item.maxOccupancy(),
-                availableRooms(remainingByDate, query),
+                NightlyAvailability.availableRooms(remainingByDate, query),
                 item.breakfastIncluded(),
                 item.currency(),
-                totalAmountIncludingTax,
-                taxAmount);
+                fare.totalAmountIncludingTax(),
+                fare.taxAmount());
     }
 
     private Map<LocalDate, Integer> remainingRoomsByDate(AAvailability item, List<ADailyRate> dailyRates) {
@@ -166,15 +161,6 @@ public class SupplierAClient implements SupplierClient {
             }
         }
         return remainingByDate;
-    }
-
-    private int availableRooms(Map<LocalDate, Integer> remainingByDate, AvailabilityQuery query) {
-        int minimum = Integer.MAX_VALUE;
-        for (LocalDate night = query.checkIn(); night.isBefore(query.checkOut()); night = night.plusDays(1)) {
-            minimum = Math.min(minimum, remainingByDate.getOrDefault(night, 0));
-        }
-
-        return minimum;
     }
 
     private static boolean hasCause(Throwable throwable, Class<? extends Throwable> type) {

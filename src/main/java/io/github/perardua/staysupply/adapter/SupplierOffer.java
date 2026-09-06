@@ -9,7 +9,7 @@ public record SupplierOffer(
         int availableRooms,
         boolean breakfastIncluded,
         String currency,
-        long totalAmountIncludingTax, // A는 날짜별 nightlyRate + taxAmount, B는 totalPrice
+        Long totalAmountIncludingTax, // A는 날짜별 nightlyRate + taxAmount, B는 totalPrice
         Long taxAmount
 ) {
 }
