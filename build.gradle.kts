@@ -42,6 +42,23 @@ dependencies {
 	testAnnotationProcessor("org.projectlombok:lombok")
 }
 
-tasks.withType<Test> {
-	useJUnitPlatform()
+// 채점자가 fresh clone 후 ./gradlew build만 해도 통과해야 하므로
+// 기본 test는 Docker 없이 도는 것만 돌린다.
+tasks.test {
+	useJUnitPlatform {
+		excludeTags("docker")
+	}
+}
+
+// DataSource가 필요한 통합 테스트. 프로필별 빈 조립, 트랜잭션 프록시, 끝단 흐름을 본다.
+// compose가 MySQL을 띄우므로 Docker 데몬이 있어야 한다.
+tasks.register<Test>("integrationTest") {
+	group = "verification"
+	description = "Docker가 필요한 통합 테스트만 실행한다"
+	testClassesDirs = sourceSets["test"].output.classesDirs
+	classpath = sourceSets["test"].runtimeClasspath
+	useJUnitPlatform {
+		includeTags("docker")
+	}
+	shouldRunAfter(tasks.test)
 }
