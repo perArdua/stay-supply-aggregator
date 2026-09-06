@@ -29,7 +29,7 @@
 
 | 의미 | Supplier A | Supplier B | 통일 결과 |
 |---|---|---|---|
-| 타임아웃 | connect/overall 초과 | 동일 | `SupplierTimeoutException` |
+| 타임아웃 | connect/엔드포인트별 상한 초과 | 동일 | `SupplierTimeoutException` |
 | 공급사 내부 오류 | HTTP 500 | 200 + `E500` | `SupplierServerException` |
 | 일시적 장애 | HTTP 503 | 200 + `E503` | `SupplierServerException` |
 | 잘못된 요청 | HTTP 400 | 200 + `E400` | `SupplierClientErrorException` |
@@ -38,6 +38,11 @@
 | 미지의 resultCode | — | 200 + 미정의 코드 | `SupplierMalformedException` |
 | 성공 선언 + 본문 없음 | 빈 리스트로 처리 | `SupplierMalformedException` | 공급사별로 다름 |
 | 역직렬화 실패 | 발생 시 | 발생 시 | `SupplierMalformedException` |
+
+- 이후 요청이 공급사에 나가지 못하는 경우 두 가지가 계열에 더해짐
+  - 서킷이 열려 호출하지 않은 `SupplierCircuitOpenException`
+  - 커넥션 풀이 포화되어 호출하지 못한 `SupplierPoolExhaustedException`
+  - 위 표는 공급사의 응답을 분류한 것인데 이 둘은 응답 자체가 없으므로 넣지 않음
 
 #### 같은 "본문 없음"을 다르게 다룬 이유
 - 성공을 선언한 주체가 다름
@@ -67,7 +72,7 @@
   - 하위 클래스는 전부 final로 두어 계층이 더 벌어지지 않게 함
 
 #### 이 선택의 비용
-- 새 공급사가 기존 네 분류에 없는 실패를 가져오면 예외 계층을 수정해야 함
+- 새 공급사가 기존 분류에 없는 실패를 가져오면 예외 계층을 수정해야 함
   - 어댑터만 추가하면 된다는 원칙에서 벗어나는 유일한 지점임
 - 실패의 의미는 도메인이 알아야 하는 개념이므로 의미까지 공급사별로 두게 되면 호출부가 공급사를 아는 상태가 되어 통일의 목적과는 거리가 멀다고 생각함
 
@@ -124,11 +129,14 @@
 ---
 
 ### 타임아웃 구성
-- connect timeout, overall timeout을 사용함
-- overall timeout을 사용한 이유
+- connect timeout과 호출 상한을 사용함
+- 호출 상한을 사용한 이유
   - 연결은 되었는데 응답이 오지 않는 경우가 있을 수 있음
   - 공급사 하나의 무응답이 나머지 처리를 막게 되므로 timeout 상한이 필요하다고 생각함
+- 호출 상한은 공급사가 아니라 엔드포인트 단위로 둠
+  - 숙소 목록은 배치로 부르고 재고 조회는 검색마다 부르므로 성격이 다름
+  - 근거는 회복 탄력성 문서에 정리함
 - read timeout을 쓰지 않은 이유
   - 데이터가 평시보다 조금씩만 계속 들어오는 상황은 read timeout으로 해결할 수 없음
-  - read timeout을 두었을 때 얻는 이점은 데이터가 들어오지 않을 때 overall timeout보다 일찍 에러를 던진다는 것임
+  - read timeout을 두었을 때 얻는 이점은 데이터가 들어오지 않을 때 호출 상한보다 일찍 에러를 던진다는 것임
   - 이 이점 말고는 얻을 게 없다고 판단하여 도입하지 않음
