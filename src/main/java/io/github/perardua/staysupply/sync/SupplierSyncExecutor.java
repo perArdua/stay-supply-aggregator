@@ -1,47 +1,27 @@
 package io.github.perardua.staysupply.sync;
 
 import io.github.perardua.staysupply.adapter.PropertyListing;
-import io.github.perardua.staysupply.adapter.RoomTypeListing;
 import io.github.perardua.staysupply.adapter.SupplierClient;
-import jakarta.transaction.Transactional;
 
-import java.time.LocalDateTime;
-import java.time.ZoneOffset;
 import java.util.List;
 
 public class SupplierSyncExecutor {
 
-    private final SyncRepository syncRepository;
+    private final MappingWriter mappingWriter;
 
-    public SupplierSyncExecutor(SyncRepository syncRepository) {
-        this.syncRepository = syncRepository;
+    public SupplierSyncExecutor(MappingWriter mappingWriter) {
+        this.mappingWriter = mappingWriter;
     }
 
-    @Transactional
     public SyncResult sync(SupplierClient supplierClient) {
-        LocalDateTime startedAt = LocalDateTime.now(ZoneOffset.UTC);
-
+        // 공급사 호출은 트랜잭션 밖에서 한다.
         List<PropertyListing> propertyListingList = supplierClient.fetchProperties();
 
+        // 목록을 받지 못한 채 저장 구간에 들어가면 스윕이 이 공급사의 매핑을 전부 비활성화한다.
         if (propertyListingList.isEmpty()) {
             throw new EmptyPropertyListException(supplierClient.supplier());
         }
 
-        int roomTypeCount = 0;
-
-        for (PropertyListing property: propertyListingList) {
-            long propertyId = syncRepository.upsertProperty(
-                    supplierClient.supplier(), property.supplierCode(), startedAt
-            );
-
-            for (RoomTypeListing roomType : property.roomTypeListingList()) {
-                syncRepository.upsertRoomType(propertyId, roomType.supplierCode(), startedAt);
-                ++roomTypeCount;
-            }
-        }
-
-        syncRepository.deactivateStale(supplierClient.supplier(), startedAt);
-
-        return SyncResult.ok(supplierClient.supplier(), propertyListingList.size(), roomTypeCount);
+        return mappingWriter.write(supplierClient.supplier(), propertyListingList);
     }
 }

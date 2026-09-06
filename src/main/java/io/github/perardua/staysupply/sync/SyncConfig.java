@@ -30,8 +30,13 @@ public class SyncConfig {
     }
 
     @Bean
-    public SupplierSyncExecutor supplierSyncExecutor(SyncRepository syncRepository) {
-        return new SupplierSyncExecutor(syncRepository);
+    public MappingWriter mappingWriter(SyncRepository syncRepository) {
+        return new MappingWriter(syncRepository);
+    }
+
+    @Bean
+    public SupplierSyncExecutor supplierSyncExecutor(MappingWriter mappingWriter) {
+        return new SupplierSyncExecutor(mappingWriter);
     }
 
     @Bean
