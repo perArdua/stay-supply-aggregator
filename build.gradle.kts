@@ -42,7 +42,7 @@ dependencies {
 	testAnnotationProcessor("org.projectlombok:lombok")
 }
 
-// 채점자가 fresh clone 후 ./gradlew build만 해도 통과해야 하므로
+// Docker가 없는 환경에서도 ./gradlew build가 통과해야 하므로
 // 기본 test는 Docker 없이 도는 것만 돌린다.
 tasks.test {
 	useJUnitPlatform {
