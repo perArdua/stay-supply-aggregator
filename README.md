@@ -65,16 +65,16 @@ curl "http://localhost:8080/api/v1/stays/search?checkIn=2026-09-01&checkOut=2026
 ```json
 {
   "offers": [
-    {"propertyId":52384,"propertyName":"Riverside Hotel Seoul",
-     "roomTypeId":52393,"roomTypeName":"Deluxe Twin","maxOccupancy":2,
+    {"propertyId":11,"propertyName":"Riverside Hotel Seoul",
+     "roomTypeId":11,"roomTypeName":"Deluxe Twin","maxOccupancy":2,
      "availableRooms":1,"breakfastIncluded":false,
      "currency":"KRW","totalAmountIncludingTax":429000,"taxAmount":39000,"supplier":"A"},
-    {"propertyId":52385,"propertyName":"Namsan Garden Stay",
-     "roomTypeId":52394,"roomTypeName":"Standard Double","maxOccupancy":2,
+    {"propertyId":12,"propertyName":"Namsan Garden Stay",
+     "roomTypeId":12,"roomTypeName":"Standard Double","maxOccupancy":2,
      "availableRooms":0,"breakfastIncluded":false,
      "currency":"KRW","totalAmountIncludingTax":302500,"taxAmount":27500,"supplier":"A"},
-    {"propertyId":52386,"propertyName":"Riverside Hotel Seoul",
-     "roomTypeId":52395,"roomTypeName":"Deluxe Twin Room","maxOccupancy":2,
+    {"propertyId":13,"propertyName":"Riverside Hotel Seoul",
+     "roomTypeId":13,"roomTypeName":"Deluxe Twin Room","maxOccupancy":2,
      "availableRooms":1,"breakfastIncluded":true,
      "currency":"KRW","totalAmountIncludingTax":452000,"taxAmount":null,"supplier":"B"}
   ],
@@ -84,6 +84,8 @@ curl "http://localhost:8080/api/v1/stays/search?checkIn=2026-09-01&checkOut=2026
   ]
 }
 ```
+
+내부 식별자는 AUTO_INCREMENT로 부여되므로 동기화 이력에 따라 값이 달라짐. 빈 DB에서 처음 동기화하면 위 값이 나옴.
 
 ### 5. 장애 상황 재현
 
@@ -142,6 +144,15 @@ curl -X POST 'http://localhost:9091/control/b/mode?value=error'
 curl -X POST 'http://localhost:9090/control/a/mode?value=normal'
 curl -X POST 'http://localhost:9091/control/b/mode?value=normal'
 ```
+
+### 테스트
+
+```
+./gradlew build           # 단위 테스트 82개. Docker 없이 통과한다
+./gradlew integrationTest # 통합 테스트 12개. Docker 데몬이 실행 중이어야 한다
+```
+
+통합 테스트는 MySQL 컨테이너를 직접 띄웠다가 내리므로 build에서 분리했다. Docker가 없는 환경에서도 build가 통과해야 하기 때문이다.
 
 ---
 
@@ -291,11 +302,11 @@ A를 만든 뒤 B를 추가하며 실제로 손댄 곳을 기록함.
 | 설정 추가 | `application.yaml`의 `suppliers.b` 블록 |
 | 기존 로직 수정 | 0개 |
 
-각 클래스에서 설정해야 하는 아래와 같음
+각 클래스에서 설정해야 하는 값은 아래와 같음
 
 - `adapter/c/SupplierCProperties` — base-url, api-key, 타임아웃 값
 - `adapter/c/SupplierCConfig` — WebClient와 커넥션 풀
-  - `adapter/c/SupplierCClient` — 호출과 표준 모델 변환
+- `adapter/c/SupplierCClient` — 호출과 표준 모델 변환
 
 `Supplier` enum이 늘어나는 것은 OCP 위반으로 보지 않음
 - 여기에 상수 추가를 강제하는 것이 등록 누락을 막는 장치라고 생각하기 때문임
@@ -306,7 +317,7 @@ A를 만든 뒤 B를 추가하며 실제로 손댄 곳을 기록함.
   - 해당 공급사의 Config만 수정하면 됨
 - 목록이 페이징으로 오는 경우
   - 해당 공급사의 Client가 합쳐서 반환하면 되며 인터페이스는 그대로임
-- 기존 네 분류에 없는 실패 표현을 가져오는 경우
+- 기존 여섯 분류에 없는 실패 표현을 가져오는 경우
   - 예외 계층 수정이 필요함
 
 ### 공통 코드를 만들지 않음

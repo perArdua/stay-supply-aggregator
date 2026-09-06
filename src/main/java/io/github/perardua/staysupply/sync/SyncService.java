@@ -26,7 +26,7 @@ public class SyncService {
         return ret;
     }
 
-    public boolean hashAnyMapping() {
+    public boolean hasAnyMapping() {
         return syncRepository.hasAnyMapping();
     }
 

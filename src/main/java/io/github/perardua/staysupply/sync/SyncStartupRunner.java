@@ -20,7 +20,7 @@ public class SyncStartupRunner implements ApplicationRunner {
 
     @Override
     public void run(ApplicationArguments args) throws Exception {
-        if (syncService.hashAnyMapping()) {
+        if (syncService.hasAnyMapping()) {
             log.info("startup sync skipped - mapping table is not empty");
             return;
         }

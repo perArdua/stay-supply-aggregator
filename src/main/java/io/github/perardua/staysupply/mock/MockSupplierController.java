@@ -19,7 +19,7 @@ import org.springframework.web.bind.annotation.RestController;
  * <p>모드 전환 (공급사별 독립, 기본 normal):
  * <pre>
  * curl -X POST 'http://localhost:9090/control/a/mode?value=no-response'
- * curl -X POST 'http://localhost:9090/control/b/mode?value=error'
+ * curl -X POST 'http://localhost:9091/control/b/mode?value=error'
  * curl -X POST 'http://localhost:9090/control/a/mode?value=normal'
  * </pre>
  */
