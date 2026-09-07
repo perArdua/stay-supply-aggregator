@@ -1,12 +1,14 @@
 package io.github.perardua.staysupply.sync;
 
 import io.github.perardua.staysupply.supplier.Supplier;
+import io.swagger.v3.oas.annotations.media.Schema;
 
 public record SyncResult(
         Supplier supplier,
         Status status,
         int propertyCount,
         int roomTypeCount,
+        @Schema(nullable = true, description = "실패한 경우의 사유. 상태가 OK면 null")
         String message
 ) {
     public enum Status { OK, EMPTY_LIST, FAILED, FAILED_UNKNOWN }

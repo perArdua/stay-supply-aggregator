@@ -1,10 +1,12 @@
 package io.github.perardua.staysupply.search;
 
 import io.github.perardua.staysupply.supplier.Supplier;
+import io.swagger.v3.oas.annotations.media.Schema;
 
 public record SupplierStatus(
         Supplier supplier,
         Status status,
+        @Schema(nullable = true, description = "실패한 경우의 사유. 상태가 OK면 null")
         String message
 ) {
     public enum Status {
