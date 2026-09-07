@@ -68,16 +68,16 @@ curl "http://localhost:8080/api/v1/stays/search?checkIn=2026-09-01&checkOut=2026
 ```json
 {
   "offers": [
-    {"propertyId":11,"propertyName":"Riverside Hotel Seoul",
-     "roomTypeId":11,"roomTypeName":"Deluxe Twin","maxOccupancy":2,
+    {"propertyId":1,"propertyName":"Riverside Hotel Seoul",
+     "roomTypeId":1,"roomTypeName":"Deluxe Twin","maxOccupancy":2,
      "availableRooms":1,"breakfastIncluded":false,
      "currency":"KRW","totalAmountIncludingTax":429000,"taxAmount":39000,"supplier":"A"},
-    {"propertyId":12,"propertyName":"Namsan Garden Stay",
-     "roomTypeId":12,"roomTypeName":"Standard Double","maxOccupancy":2,
+    {"propertyId":2,"propertyName":"Namsan Garden Stay",
+     "roomTypeId":2,"roomTypeName":"Standard Double","maxOccupancy":2,
      "availableRooms":0,"breakfastIncluded":false,
      "currency":"KRW","totalAmountIncludingTax":302500,"taxAmount":27500,"supplier":"A"},
-    {"propertyId":13,"propertyName":"Riverside Hotel Seoul",
-     "roomTypeId":13,"roomTypeName":"Deluxe Twin Room","maxOccupancy":2,
+    {"propertyId":3,"propertyName":"Riverside Hotel Seoul",
+     "roomTypeId":3,"roomTypeName":"Deluxe Twin Room","maxOccupancy":2,
      "availableRooms":1,"breakfastIncluded":true,
      "currency":"KRW","totalAmountIncludingTax":452000,"taxAmount":null,"supplier":"B"}
   ],
@@ -298,6 +298,7 @@ A의 `A-10023`과 B의 `B77120`이 실제로는 같은 숙소지만, 각각 다�
 OCP를 지키는 코드로 작성함
 
 A를 만든 뒤 B를 추가하며 실제로 손댄 곳을 기록함.
+
 | 종류 | 내용 |
 |---|---|
 | 신규 클래스 | `adapter/b/` 3개 (Properties, Config, Client) |
@@ -312,6 +313,7 @@ A를 만든 뒤 B를 추가하며 실제로 손댄 곳을 기록함.
 - `adapter/c/SupplierCClient` — 호출과 표준 모델 변환
 
 `Supplier` enum이 늘어나는 것은 OCP 위반으로 보지 않음
+
 - 여기에 상수 추가를 강제하는 것이 등록 누락을 막는 장치라고 생각하기 때문임
 
 **확장 시 예상되는 변형**
