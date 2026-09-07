@@ -18,7 +18,7 @@ import reactor.core.publisher.Mono;
 @Profile("!mock")
 @RestController
 @RequestMapping("/api/v1/stays")
-public class SearchController {
+public class SearchController implements SearchApi {
 
     private final SearchService searchService;
 
@@ -26,6 +26,7 @@ public class SearchController {
         this.searchService = searchService;
     }
 
+    @Override
     @GetMapping("/search")
     public Mono<ResponseEntity<?>> search(
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate checkIn,

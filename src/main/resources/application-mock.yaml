@@ -10,3 +10,10 @@ spring:
   docker:
     compose:
       enabled: false
+
+# Mock은 내보내지 않음
+springdoc:
+  api-docs:
+    enabled: false
+  swagger-ui:
+    enabled: false
